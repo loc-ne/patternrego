@@ -141,6 +141,7 @@ def main():
     # Determine dataset path
     code_dir = os.path.dirname(os.path.abspath(__file__))
     parent_dir = os.path.dirname(code_dir)
+    base_dir = parent_dir
     if args.dataset == 'ck':
         dataset_path = os.path.join(code_dir, 'ck-basic')
         if not os.path.exists(dataset_path):
