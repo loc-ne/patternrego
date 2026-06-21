@@ -11,8 +11,13 @@ import torchvision.models as models
 import clip
 
 class RafDataset(data.Dataset):
-    def __init__(self, dataset_path, transform=None):
+    def __init__(self, dataset_path, transform=None, crop_face=False):
         self.transform = transform
+        self.crop_face = crop_face
+        if self.crop_face:
+            # Load face detector
+            self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+            
         label_path = os.path.join(dataset_path, 'EmoLabel', 'list_patition_label.txt')
         if not os.path.exists(label_path):
             raise FileNotFoundError(f"Label file not found at {label_path}")
@@ -48,6 +53,24 @@ class RafDataset(data.Dataset):
         if image is None:
             print(f"Warning: Image not found for index {idx}: {img_name}")
             return torch.zeros(3, 224, 224), self.label[idx], idx, torch.zeros(3, 224, 224)
+
+        if self.crop_face:
+            try:
+                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                faces = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(50, 50))
+                if len(faces) > 0:
+                    x, y, w, h = faces[0]
+                    # Crop face with a 10% margin
+                    h_img, w_img, _ = image.shape
+                    pad = int(w * 0.1)
+                    y1 = max(0, y - pad)
+                    y2 = min(h_img, y + h + pad)
+                    x1 = max(0, x - pad)
+                    x2 = min(w_img, x + w + pad)
+                    image = image[y1:y2, x1:x2]
+            except Exception as e:
+                # Silently fallback to raw image if detection fails
+                pass
 
         img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         label = self.label[idx]
@@ -134,6 +157,7 @@ def main():
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
     parser.add_argument('--workers', type=int, default=4, help='Number of workers')
     parser.add_argument('--gpu', type=int, default=0, help='GPU ID to use')
+    parser.add_argument('--crop_face', action='store_true', help='Use Haar Cascade to crop face from raw image')
     args = parser.parse_args()
 
     setup_seed(3407)
@@ -157,7 +181,7 @@ def main():
     else:
         dataset_path = args.dataset_path
 
-    print(f"Testing on dataset: {args.dataset.upper()} (Path: {dataset_path})")
+    print(f"Testing on dataset: {args.dataset.upper()} (Path: {dataset_path}, Crop Face: {args.crop_face})")
 
     eval_transforms = transforms.Compose([
         transforms.ToPILImage(),
@@ -168,7 +192,7 @@ def main():
     ])
 
     try:
-        test_dataset = RafDataset(dataset_path=dataset_path, transform=eval_transforms)
+        test_dataset = RafDataset(dataset_path=dataset_path, transform=eval_transforms, crop_face=args.crop_face)
     except Exception as e:
         print(f"Error loading dataset: {e}")
         print("Please run 'python reorganize_datasets.py' first to format the datasets.")
