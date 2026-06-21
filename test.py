@@ -11,10 +11,11 @@ import torchvision.models as models
 import clip
 
 class RafDataset(data.Dataset):
-    def __init__(self, dataset_path, transform=None, crop_face=False, dataset_name=''):
+    def __init__(self, dataset_path, transform=None, crop_face=False, dataset_name='', split='test'):
         self.transform = transform
         self.crop_face = crop_face
         self.dataset_name = dataset_name
+        self.split = split
         if self.crop_face:
             # Load face detector
             self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -24,6 +25,25 @@ class RafDataset(data.Dataset):
             raise FileNotFoundError(f"Label file not found at {label_path}")
         
         dataset = pd.read_csv(label_path, sep=' ', header=None)
+        
+        # Filter based on split
+        if self.split != 'all':
+            if self.dataset_name == 'raf':
+                mask = dataset[0].str.startswith(self.split)
+                dataset = dataset[mask]
+            elif self.dataset_name == 'sfew':
+                if self.split == 'test':
+                    mask = dataset[0].str.startswith('Val') | dataset[0].str.startswith('Test')
+                else:
+                    mask = dataset[0].str.startswith('Train')
+                dataset = dataset[mask]
+            elif self.dataset_name == 'mma':
+                if self.split == 'test':
+                    mask = dataset[0].str.startswith('mma_test') | dataset[0].str.startswith('mma_valid')
+                else:
+                    mask = dataset[0].str.startswith('mma_train')
+                dataset = dataset[mask]
+
         self.file_paths = dataset.iloc[:, 0].values
         labels = dataset.iloc[:, 1].values
         
@@ -186,6 +206,7 @@ def main():
     parser.add_argument('--workers', type=int, default=4, help='Number of workers')
     parser.add_argument('--gpu', type=int, default=0, help='GPU ID to use')
     parser.add_argument('--crop_face', action='store_true', help='Use Haar Cascade to crop face from raw image')
+    parser.add_argument('--split', type=str, default='test', choices=['test', 'train', 'all'], help='Dataset split to evaluate')
     args = parser.parse_args()
 
     setup_seed(3407)
@@ -232,7 +253,7 @@ def main():
     else:
         dataset_path = args.dataset_path
 
-    print(f"Testing on dataset: {args.dataset.upper()} (Path: {dataset_path}, Crop Face: {args.crop_face})")
+    print(f"Testing on dataset: {args.dataset.upper()} (Path: {dataset_path}, Crop Face: {args.crop_face}, Split: {args.split})")
 
     eval_transforms = transforms.Compose([
         transforms.ToPILImage(),
@@ -243,7 +264,7 @@ def main():
     ])
 
     try:
-        test_dataset = RafDataset(dataset_path=dataset_path, transform=eval_transforms, crop_face=args.crop_face, dataset_name=args.dataset)
+        test_dataset = RafDataset(dataset_path=dataset_path, transform=eval_transforms, crop_face=args.crop_face, dataset_name=args.dataset, split=args.split)
     except Exception as e:
         print(f"Error loading dataset: {e}")
         print("Please run 'python reorganize_datasets.py' first to format the datasets.")
