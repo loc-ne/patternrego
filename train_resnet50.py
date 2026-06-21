@@ -284,9 +284,9 @@ from torch.autograd import Variable
 def Mask(nb_batch):
     bar = []
     for i in range(7):
-        foo = [1] * 63 + [0] *  10
+        foo = [1] * 58 + [0] *  15
         if i == 6:
-            foo = [1] * 64 + [0] *  10
+            foo = [1] * 59 + [0] *  15
         random.shuffle(foo)  #### generate mask
         bar += foo
     bar = [bar for i in range(nb_batch)]
@@ -445,7 +445,7 @@ def train(args, model, train_loader, optimizer, scheduler, device):
 
 
 
-        loss = loss1 + 5 * MC_loss[1].mean() + 1.5 * MC_loss[0].mean() 
+        loss = loss1 + 4.0 * MC_loss[1].mean() + 2.0 * MC_loss[0].mean() 
 
 
         optimizer.zero_grad()
