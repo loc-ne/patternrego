@@ -149,7 +149,7 @@ def load_checkpoint(model, path, device):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', type=str, default='ck', choices=['ck', 'jaffe', 'mma', 'custom'], help='Dataset to test')
+    parser.add_argument('--dataset', type=str, default='ck', choices=['ck', 'jaffe', 'mma', 'raf', 'sfew', 'custom'], help='Dataset to test')
     parser.add_argument('--dataset_path', type=str, default='', help='Path to custom dataset directory if choice is custom')
     parser.add_argument('--checkpoint_path', type=str, 
                         default='/kaggle/input/datasets/nguynquclc/checkpoint-resnet50/ours_best_resnet50.pth', 
@@ -166,18 +166,41 @@ def main():
     code_dir = os.path.dirname(os.path.abspath(__file__))
     parent_dir = os.path.dirname(code_dir)
     base_dir = parent_dir
+    
     if args.dataset == 'ck':
         dataset_path = os.path.join(code_dir, 'ck-basic')
         if not os.path.exists(dataset_path):
             dataset_path = os.path.join(parent_dir, 'ck-basic')
+            
     elif args.dataset == 'jaffe':
         dataset_path = os.path.join(code_dir, 'jaffe-basic')
         if not os.path.exists(dataset_path):
             dataset_path = os.path.join(parent_dir, 'jaffe-basic')
+            
     elif args.dataset == 'mma':
-        dataset_path = os.path.join(code_dir, 'mma-basic')
+        # Prioritize Kaggle path for MMA
+        dataset_path = '/kaggle/input/datasets/nguynquclc/mma-basic/mma-basic'
+        if not os.path.exists(dataset_path):
+            dataset_path = os.path.join(code_dir, 'mma-basic')
         if not os.path.exists(dataset_path):
             dataset_path = os.path.join(parent_dir, 'mma-basic')
+            
+    elif args.dataset == 'raf':
+        # Prioritize Kaggle path for RAF-DB
+        dataset_path = '/kaggle/input/datasets/nguynquclc/raf-db/raf-basic'
+        if not os.path.exists(dataset_path):
+            dataset_path = os.path.join(code_dir, 'raf-basic')
+        if not os.path.exists(dataset_path):
+            dataset_path = os.path.join(parent_dir, 'raf-basic')
+            
+    elif args.dataset == 'sfew':
+        # Prioritize Kaggle path for SFEW
+        dataset_path = '/kaggle/input/datasets/nguynquclc/sfew2-0/sfew-basic'
+        if not os.path.exists(dataset_path):
+            dataset_path = os.path.join(code_dir, 'sfew-basic')
+        if not os.path.exists(dataset_path):
+            dataset_path = os.path.join(parent_dir, 'sfew-basic')
+            
     else:
         dataset_path = args.dataset_path
 
