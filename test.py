@@ -139,13 +139,20 @@ def main():
     setup_seed(3407)
 
     # Determine dataset path
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    code_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(code_dir)
     if args.dataset == 'ck':
-        dataset_path = os.path.join(base_dir, 'ck-basic')
+        dataset_path = os.path.join(code_dir, 'ck-basic')
+        if not os.path.exists(dataset_path):
+            dataset_path = os.path.join(parent_dir, 'ck-basic')
     elif args.dataset == 'jaffe':
-        dataset_path = os.path.join(base_dir, 'jaffe-basic')
+        dataset_path = os.path.join(code_dir, 'jaffe-basic')
+        if not os.path.exists(dataset_path):
+            dataset_path = os.path.join(parent_dir, 'jaffe-basic')
     elif args.dataset == 'mma':
-        dataset_path = os.path.join(base_dir, 'mma-basic')
+        dataset_path = os.path.join(code_dir, 'mma-basic')
+        if not os.path.exists(dataset_path):
+            dataset_path = os.path.join(parent_dir, 'mma-basic')
     else:
         dataset_path = args.dataset_path
 
