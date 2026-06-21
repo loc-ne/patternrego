@@ -207,6 +207,7 @@ def main():
     parser.add_argument('--gpu', type=int, default=0, help='GPU ID to use')
     parser.add_argument('--crop_face', action='store_true', help='Use Haar Cascade to crop face from raw image')
     parser.add_argument('--split', type=str, default='test', choices=['test', 'train', 'all'], help='Dataset split to evaluate')
+    parser.add_argument('--tta', action='store_true', help='Use Test-Time Augmentation (Horizontal Flip)')
     args = parser.parse_args()
 
     setup_seed(3407)
@@ -253,7 +254,7 @@ def main():
     else:
         dataset_path = args.dataset_path
 
-    print(f"Testing on dataset: {args.dataset.upper()} (Path: {dataset_path}, Crop Face: {args.crop_face}, Split: {args.split})")
+    print(f"Testing on dataset: {args.dataset.upper()} (Path: {dataset_path}, Crop Face: {args.crop_face}, Split: {args.split}, TTA: {args.tta})")
 
     eval_transforms = transforms.Compose([
         transforms.ToPILImage(),
@@ -321,7 +322,13 @@ def main():
             imgs1 = imgs1.to(device)
             labels = labels.to(device)
 
-            outputs, _ = model(imgs1)
+            if args.tta:
+                imgs2 = imgs2.to(device)
+                outputs1, _ = model(imgs1)
+                outputs2, _ = model(imgs2)
+                outputs = (outputs1 + outputs2) / 2.0
+            else:
+                outputs, _ = model(imgs1)
 
             _, predicts = torch.max(outputs, 1)
             correct_num = torch.eq(predicts, labels).sum()
