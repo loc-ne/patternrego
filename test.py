@@ -32,24 +32,41 @@ class RafDataset(data.Dataset):
 
     def __getitem__(self, idx):
         img_name = str(self.file_paths[idx])
-        exts = ['', '.jpg', '.png', '.tiff', '.jpeg']
-        image = None
-        for ext in exts:
-            path = os.path.join(self.base_img_path, img_name + ext)
-            if os.path.exists(path):
-                image = cv2.imread(path)
-                if image is not None:
-                    break
+        name_without_ext, ext_orig = os.path.splitext(img_name)
         
-        if image is None:
-            # Fallback if the path recorded in txt is already absolute or has extension
+        # Try both base name, name + '_aligned', and name without '_aligned' if present
+        candidates = [img_name, name_without_ext]
+        if '_aligned' not in name_without_ext:
+            candidates.append(name_without_ext + '_aligned')
+        else:
+            candidates.append(name_without_ext.replace('_aligned', ''))
+            
+        exts = ['', '.jpg', '.png', '.tiff', '.jpeg', '.tif']
+        image = None
+        
+        # Try finding in self.base_img_path
+        for candidate in candidates:
             for ext in exts:
-                path = img_name + ext
+                path = os.path.join(self.base_img_path, candidate + ext)
                 if os.path.exists(path):
                     image = cv2.imread(path)
                     if image is not None:
                         break
-        
+            if image is not None:
+                break
+                
+        # Fallback to absolute or relative path directly
+        if image is None:
+            for candidate in candidates:
+                for ext in exts:
+                    path = candidate + ext
+                    if os.path.exists(path):
+                        image = cv2.imread(path)
+                        if image is not None:
+                            break
+                if image is not None:
+                    break
+                    
         if image is None:
             print(f"Warning: Image not found for index {idx}: {img_name}")
             return torch.zeros(3, 224, 224), self.label[idx], idx, torch.zeros(3, 224, 224)
