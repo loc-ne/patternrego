@@ -11,9 +11,10 @@ import torchvision.models as models
 import clip
 
 class RafDataset(data.Dataset):
-    def __init__(self, dataset_path, transform=None, crop_face=False):
+    def __init__(self, dataset_path, transform=None, crop_face=False, dataset_name=''):
         self.transform = transform
         self.crop_face = crop_face
+        self.dataset_name = dataset_name
         if self.crop_face:
             # Load face detector
             self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -24,7 +25,17 @@ class RafDataset(data.Dataset):
         
         dataset = pd.read_csv(label_path, sep=' ', header=None)
         self.file_paths = dataset.iloc[:, 0].values
-        self.label = dataset.iloc[:, 1].values
+        labels = dataset.iloc[:, 1].values
+        
+        if self.dataset_name == 'raf':
+            # Map RAF-DB original labels (1-7) to Model labels (0-6)
+            # RAF: 1: Surprise, 2: Fear, 3: Disgust, 4: Happiness, 5: Sadness, 6: Anger, 7: Neutral
+            # Model: 0: Neutral, 1: Happy, 2: Surprise, 3: Sad, 4: Angry, 5: Disgust, 6: Fear
+            raf_map = {1: 2, 2: 6, 3: 5, 4: 1, 5: 3, 6: 4, 7: 0}
+            self.label = np.array([raf_map[lbl] if lbl in raf_map else lbl for lbl in labels])
+        else:
+            self.label = labels
+            
         self.base_img_path = os.path.join(dataset_path, 'Image', 'aligned')
 
     def __len__(self):
@@ -232,7 +243,7 @@ def main():
     ])
 
     try:
-        test_dataset = RafDataset(dataset_path=dataset_path, transform=eval_transforms, crop_face=args.crop_face)
+        test_dataset = RafDataset(dataset_path=dataset_path, transform=eval_transforms, crop_face=args.crop_face, dataset_name=args.dataset)
     except Exception as e:
         print(f"Error loading dataset: {e}")
         print("Please run 'python reorganize_datasets.py' first to format the datasets.")
